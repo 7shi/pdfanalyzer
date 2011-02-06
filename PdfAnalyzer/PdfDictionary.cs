@@ -13,8 +13,13 @@ namespace PdfAnalyzer
         {
             var lexer = parser.Lexer;
             lexer.ReadToken();
-            while (lexer.Current != null && lexer.Current != ">>")
+            while (lexer.Current != null)
             {
+                if (lexer.Current == ">>")
+                {
+                    lexer.ReadToken();
+                    break;
+                }
                 var key = lexer.Current;
                 lexer.ReadToken();
                 dic[key] = parser.Read();

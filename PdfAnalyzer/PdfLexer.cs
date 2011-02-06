@@ -119,5 +119,14 @@ namespace PdfAnalyzer
             var msg = string.Format(format, args);
             return new Exception(string.Format("{0:x} [{1}] {2}", Position, current, msg));
         }
+
+        public long SkipStream(long len)
+        {
+            if (cur == 0x0d) stream.ReadByte();
+            Clear();
+            var ret = stream.Position;
+            stream.Position += len;
+            return ret;
+        }
     }
 }
