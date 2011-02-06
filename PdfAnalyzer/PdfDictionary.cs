@@ -17,36 +17,7 @@ namespace PdfAnalyzer
             {
                 var key = lexer.Current;
                 lexer.ReadToken();
-                if (lexer.IsNumber)
-                {
-                    var num = double.Parse(lexer.Current);
-                    lexer.ReadToken();
-                    if (lexer.IsNumber)
-                    {
-                        var num2 = int.Parse(lexer.Current);
-                        lexer.ReadToken();
-                        if (lexer.Current == "R")
-                        {
-                            dic[key] = new PdfReference((int)num, num2);
-                            lexer.ReadToken();
-                        }
-                        else
-                            throw lexer.Abort("required: R");
-                    }
-                    else
-                        dic[key] = num;
-                }
-                else if (lexer.Current == "[")
-                {
-                    while (lexer.Current != null && lexer.Current != "]")
-                        lexer.ReadToken();
-                    lexer.ReadToken();
-                }
-                else
-                {
-                    dic[key] = lexer.Current;
-                    lexer.ReadToken();
-                }
+                dic[key] = parser.Read();
             }
         }
 

@@ -52,7 +52,7 @@ namespace PdfAnalyzer
                 var offset = parser.Xref[k];
                 var details = tr.ContainsKey(k) ? tr[k] : "";
                 var it = new ListViewItem(
-                    new[] { k.ToString(), offset.ToString(), offset.ToString("x"), details });
+                    new[] { "", k.ToString(), offset.ToString(), offset.ToString("x"), details });
                 listView1.Items.Add(it);
             }
             listView1.EndUpdate();

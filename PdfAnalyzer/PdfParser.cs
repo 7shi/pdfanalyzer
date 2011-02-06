@@ -118,5 +118,72 @@ namespace PdfAnalyzer
             }
             return ret;
         }
+
+        public object Read()
+        {
+            if (Lexer.IsNumber)
+            {
+                var num = double.Parse(Lexer.Current);
+                Lexer.ReadToken();
+                if (Lexer.IsNumber)
+                {
+                    var num2 = int.Parse(Lexer.Current);
+                    Lexer.ReadToken();
+                    if (Lexer.Current == "R")
+                    {
+                        Lexer.ReadToken();
+                        return new PdfReference((int)num, num2);
+                    }
+                    else
+                        throw Lexer.Abort("required: R");
+                }
+                else
+                    return num;
+            }
+            else if (Lexer.Current == "[")
+            {
+                var list = new List<object>();
+                Lexer.ReadToken();
+                while (Lexer.Current != null)
+                {
+                    if (Lexer.Current == "]")
+                    {
+                        Lexer.ReadToken();
+                        break;
+                    }
+                    list.Add(Read());
+                }
+                return list.ToArray();
+            }
+            else if (Lexer.Current == "<")
+                return ReadUntil('>');
+            else if (Lexer.Current == "(")
+                return ReadUntil(')');
+            else
+            {
+                var ret = Lexer.Current;
+                Lexer.ReadToken();
+                return ret;
+            }
+        }
+
+        private string ReadUntil(char end)
+        {
+            var sb = new StringBuilder(Lexer.Current);
+            for (; ; )
+            {
+                int b = stream.ReadByte();
+                if (b == -1) break;
+                var ch = (char)b;
+                sb.Append(ch);
+                if (ch == end)
+                {
+                    Lexer.Clear();
+                    Lexer.ReadToken();
+                    break;
+                }
+            }
+            return sb.ToString();
+        }
     }
 }
