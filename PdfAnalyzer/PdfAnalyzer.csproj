@@ -52,16 +52,16 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <Compile Include="PdfDeflateStream.cs" />
-    <Compile Include="PdfDocument.cs" />
-    <Compile Include="PdfLexer.cs" />
-    <Compile Include="PdfObject.cs" />
-    <Compile Include="PdfParser.cs" />
-    <Compile Include="PdfReference.cs" />
+    <Compile Include="PdfLib\PdfDeflateStream.cs" />
+    <Compile Include="PdfLib\PdfDocument.cs" />
+    <Compile Include="PdfLib\PdfLexer.cs" />
+    <Compile Include="PdfLib\PdfObject.cs" />
+    <Compile Include="PdfLib\PdfParser.cs" />
+    <Compile Include="PdfLib\PdfReference.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="PdfDictionary.cs" />
-    <Compile Include="SubStream.cs" />
+    <Compile Include="PdfLib\PdfDictionary.cs" />
+    <Compile Include="PdfLib\SubStream.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>
