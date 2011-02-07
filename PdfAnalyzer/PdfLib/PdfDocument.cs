@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 
-namespace PdfAnalyzer
+namespace PdfLib
 {
     public class PdfDocument : IDisposable
     {
@@ -157,7 +156,8 @@ namespace PdfAnalyzer
                             using (var s = obj.GetStream(stream))
                             {
                                 var lexer2 = new PdfLexer(s);
-                                var s3 = lexer2.ReadString((int)obj.StreamLength, Encoding.Default);
+                                var bytes = obj.GetStreamBytes(stream);
+                                var s3 = PdfLexer.GetString(bytes, 0, bytes.Length, Encoding.Default);
                                 sw.Write(s3);
                                 if (!s3.EndsWith("\r\n")) sw.WriteLine();
                             }
@@ -184,6 +184,11 @@ namespace PdfAnalyzer
                 }
             }
             return sw.ToString();
+        }
+
+        public byte[] GetStreamBytes(PdfObject obj)
+        {
+            return obj.GetStreamBytes(parser.Lexer.Stream);
         }
     }
 }

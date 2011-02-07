@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 
-namespace PdfAnalyzer
+namespace PdfLib
 {
     public class PdfParser
     {

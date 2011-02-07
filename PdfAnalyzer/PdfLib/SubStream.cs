@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace PdfAnalyzer
+namespace PdfLib
 {
     public class SubStream : Stream
     {

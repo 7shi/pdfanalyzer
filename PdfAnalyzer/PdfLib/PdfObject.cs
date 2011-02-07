@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Text;
 
-namespace PdfAnalyzer
+namespace PdfLib
 {
     public class PdfObject
     {
@@ -143,6 +142,19 @@ namespace PdfAnalyzer
                         obj.Length = s.Position - obj.Position;
                 }
             }
+        }
+
+        public byte[] GetStreamBytes(Stream stream)
+        {
+            var ms = new MemoryStream();
+            using (var s = GetStream(stream))
+            {
+                var buf = new byte[4096];
+                int len;
+                while ((len = s.Read(buf, 0, buf.Length)) > 0)
+                    ms.Write(buf, 0, len);
+            }
+            return ms.ToArray();
         }
     }
 }
