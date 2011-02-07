@@ -36,6 +36,20 @@ namespace PdfAnalyzer
             ds = new DeflateStream(s, CompressionMode.Decompress);
         }
 
+        public PdfDeflateStream(Stream s, int columns)
+        {
+            this.columns = columns;
+            if (columns > 0)
+            {
+                prev = new byte[columns];
+                rows = new byte[columns];
+                rowpos = rows.Length;
+            }
+            s.ReadByte();
+            s.ReadByte();
+            ds = new DeflateStream(s, CompressionMode.Decompress);
+        }
+
         public override long Length
         {
             get { throw new NotImplementedException(); }
