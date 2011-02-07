@@ -30,39 +30,21 @@ namespace PdfAnalyzer
             return PdfLexer.ReadInt64(last, p);
         }
 
-        private Dictionary<int, PdfObject> xref = new Dictionary<int, PdfObject>();
-        public Dictionary<int, PdfObject> Xref { get { return xref; } }
-
-        private Dictionary<int, object> objs = new Dictionary<int, object>();
-
-        public object GetObject(int no)
-        {
-            if (objs.ContainsKey(no)) return objs[no];
-            if (!xref.ContainsKey(no)) return null;
-
-            stream.Position = xref[no].Position;
-            Lexer.Clear();
-            Lexer.ReadToken();
-            var ret = Read();
-            objs[no] = ret;
-            return ret;
-        }
-
-        public void ReadXref()
+        public void ReadXref(PdfDocument doc)
         {
             var xr = readStartXref();
             if (xr == 0) throw new Exception("not find: startxref");
 
             stream.Position = xr;
-            readXref();
+            readXref(doc);
         }
 
-        private void readXref()
+        private void readXref(PdfDocument doc)
         {
             Lexer.ReadToken();
             if (Lexer.Current != "xref")
             {
-                readXrefObject();
+                readXrefObject(doc);
                 return;
             }
             while (Lexer.Current != null)
@@ -70,7 +52,7 @@ namespace PdfAnalyzer
                 Lexer.ReadToken();
                 if (Lexer.Current == "trailer")
                 {
-                    readTrailer();
+                    readTrailer(doc);
                     return;
                 }
                 var start = int.Parse(Lexer.Current);
@@ -93,19 +75,19 @@ namespace PdfAnalyzer
                     }
                     else if (Lexer.Current != "n")
                         throw Lexer.Abort("xref: must be 'n'");
-                    if (!xref.ContainsKey(no))
+                    if (!doc.ContainsKey(no))
                     {
-                        xref.Add(no, new PdfObject(offset, no, 0));
+                        doc.Add(new PdfObject(offset, no, 0));
                     }
                 }
             }
         }
 
-        private void readXrefObject()
+        private void readXrefObject(PdfDocument doc)
         {
-            var obj = new PdfObject(this);
-            if (!xref.ContainsKey(obj.Number)) xref[obj.Number] = obj;
-            if (!objs.ContainsKey(obj.Number)) objs[obj.Number] = obj;
+            var obj = new PdfObject(doc, this);
+            if (doc.ContainsKey(obj.Number)) return;
+            doc.Add(obj);
             if (obj.Type != "/XRef" || obj.StreamLength == 0)
                 throw Lexer.Abort("required: xref");
             if (obj.Dictionary == null)
@@ -135,8 +117,8 @@ namespace PdfAnalyzer
 
             foreach (var key in new[] { "/Root", "/Size", "/Info", "/ID" })
             {
-                if (obj.Dictionary.ContainsKey(key) && !trailer.ContainsKey(key))
-                    trailer[key] = obj.Dictionary[key];
+                if (obj.Dictionary.ContainsKey(key) && !doc.ContainsTrailer(key))
+                    doc.AddTrailer(key, obj.Dictionary[key]);
             }
 
             using (var s = obj.GetStream(stream))
@@ -149,12 +131,12 @@ namespace PdfAnalyzer
                         var type = ww[0] == 0 ? 1 : ReadToInt64(s, ww[0]);
                         var f2 = ReadToInt64(s, ww[1]);
                         var f3 = ReadToInt64(s, ww[2]);
-                        if (!xref.ContainsKey(j))
+                        if (!doc.ContainsKey(j))
                         {
                             if (type == 1)
-                                xref.Add(j, new PdfObject(f2, j, 0));
+                                doc.Add(new PdfObject(j, 0, 0, f2));
                             else if (type == 2)
-                                xref.Add(j, new PdfObject((int)f2, (int)f3));
+                                doc.Add(new PdfObject(j, (int)f2, (int)f3));
                         }
                     }
                 }
@@ -164,7 +146,7 @@ namespace PdfAnalyzer
             if (obj.Dictionary.ContainsKey("/Prev"))
             {
                 stream.Position = (long)(double)obj.Dictionary["/Prev"];
-                readXref();
+                readXref(doc);
             }
         }
 
@@ -180,9 +162,7 @@ namespace PdfAnalyzer
             return ret;
         }
 
-        private Dictionary<string, object> trailer = new Dictionary<string, object>();
-
-        private void readTrailer()
+        private void readTrailer(PdfDocument doc)
         {
             Lexer.ReadToken();
             if (Lexer.Current != "<<")
@@ -195,33 +175,22 @@ namespace PdfAnalyzer
                     prev = (long)(double)dic[key];
                 else if (key == "/XRefStm")
                     xrefstm = (long)(double)dic[key];
-                else if (!trailer.ContainsKey(key))
-                    trailer[key] = dic[key];
+                else if (!doc.ContainsTrailer(key))
+                    doc.AddTrailer(key, dic[key]);
             }
             if (xrefstm != null)
             {
                 stream.Position = (long)prev;
                 Lexer.Clear();
                 Lexer.ReadToken();
-                readXrefObject();
+                readXrefObject(doc);
             }
             else if (prev != null)
             {
                 stream.Position = (long)prev;
                 Lexer.Clear();
-                readXref();
+                readXref(doc);
             }
-        }
-
-        public Dictionary<int, string> GetTrailerReferences()
-        {
-            var ret = new Dictionary<int, string>();
-            foreach (var key in trailer.Keys)
-            {
-                var r = trailer[key] as PdfReference;
-                if (r != null) ret.Add(r.Number, key);
-            }
-            return ret;
         }
 
         private object cache;

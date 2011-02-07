@@ -36,20 +36,15 @@ namespace PdfAnalyzer
         {
             toolStripStatusLabel1.Text = pdf;
             listView1.Items.Clear();
-            PdfParser parser;
-            using (var fs = new FileStream(pdf, FileMode.Open))
-            {
-                parser = new PdfParser(fs);
-                parser.ReadXref();
-            }
+            var doc = new PdfDocument(pdf);
 
             listView1.BeginUpdate();
-            var keys = new List<int>(parser.Xref.Keys);
+            var keys = new List<int>(doc.Keys);
             keys.Sort();
-            var tr = parser.GetTrailerReferences();
+            var tr = doc.GetTrailerReferences();
             foreach (var k in keys)
             {
-                var obj = parser.Xref[k];
+                var obj = doc[k];
                 var pos = obj.Position;
                 var details = tr.ContainsKey(k) ? tr[k] : "";
                 var cells = new string[7];
