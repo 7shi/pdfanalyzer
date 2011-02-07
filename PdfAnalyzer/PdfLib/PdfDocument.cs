@@ -29,7 +29,7 @@ namespace PdfLib
                 throw new Exception("not found: /Root");
             var root = this[rootref.Number];
 
-            var pagesref = root.Dictionary["/Pages"] as PdfReference;
+            var pagesref = root["/Pages"] as PdfReference;
             if (pagesref == null)
                 throw new Exception("not found: /Pages");
             addPages(this[pagesref.Number]);
@@ -38,7 +38,7 @@ namespace PdfLib
         private void addPages(PdfObject p1)
         {
             p1.Details = "/Pages";
-            var kids = p1.Dictionary["/Kids"] as object[];
+            var kids = p1["/Kids"] as object[];
             if (kids == null)
                 throw new Exception("obj " + p1.Number + ": not found: /Kids");
             for (int i = 0; i < kids.Length; i++)
@@ -150,7 +150,7 @@ namespace PdfLib
                         if (s2.StartsWith("\r\n")) s2 = s2.Substring(2);
                         sw.Write(s1);
                         if (!s1.EndsWith("\r\n")) sw.WriteLine();
-                        var filter = obj.Dictionary["/Filter"] as string;
+                        var filter = obj["/Filter"] as string;
                         if (filter == null || filter == "/FlateDecode")
                         {
                             using (var s = obj.GetStream(stream))

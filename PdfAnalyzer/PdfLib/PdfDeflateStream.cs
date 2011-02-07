@@ -16,7 +16,7 @@ namespace PdfLib
         {
             if (obj.Dictionary != null && obj.Dictionary.ContainsKey("/DecodeParms"))
             {
-                var dp = obj.Dictionary["/DecodeParms"] as PdfDictionary;
+                var dp = obj["/DecodeParms"] as PdfDictionary;
                 if (dp != null)
                 {
                     if (dp.ContainsKey("/Columns"))

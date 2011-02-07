@@ -89,18 +89,18 @@ namespace PdfLib
                 throw Lexer.Abort("required: << ... >>");
             if (!obj.Dictionary.ContainsKey("/W"))
                 throw Lexer.Abort("required: /W");
-            var w = obj.Dictionary["/W"] as object[];
+            var w = obj["/W"] as object[];
             if (w == null || w.Length != 3)
                 throw Lexer.Abort("required: /W [ n n n ]");
             var ww = new int[3];
             for (int i = 0; i < 3; i++) ww[i] = (int)(double)w[i];
             int size = 0;
             if (obj.Dictionary.ContainsKey("/Size"))
-                size = (int)(double)obj.Dictionary["/Size"];
+                size = (int)(double)obj["/Size"];
             int[] index = null;
             if (obj.Dictionary.ContainsKey("/Index"))
             {
-                var idx = obj.Dictionary["/Index"] as object[];
+                var idx = obj["/Index"] as object[];
                 if (idx == null || idx.Length != 2)
                     throw Lexer.Abort("required: /Index [ n n ]");
                 index = new int[idx.Length];
@@ -113,7 +113,7 @@ namespace PdfLib
             foreach (var key in new[] { "/Root", "/Size", "/Info", "/ID" })
             {
                 if (obj.Dictionary.ContainsKey(key) && !doc.ContainsTrailer(key))
-                    doc.AddTrailer(key, obj.Dictionary[key]);
+                    doc.AddTrailer(key, obj[key]);
             }
 
             using (var s = obj.GetStream(stream))
@@ -140,7 +140,7 @@ namespace PdfLib
             Lexer.Clear();
             if (obj.Dictionary.ContainsKey("/Prev"))
             {
-                stream.Position = (long)(double)obj.Dictionary["/Prev"];
+                stream.Position = (long)(double)obj["/Prev"];
                 readXref(doc);
             }
         }

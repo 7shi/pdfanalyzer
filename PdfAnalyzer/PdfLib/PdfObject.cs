@@ -144,6 +144,11 @@ namespace PdfLib
             }
         }
 
+        public object this[string key]
+        {
+            get { return Dictionary == null ? null : Dictionary[key]; }
+        }
+
         public byte[] GetStreamBytes(Stream stream)
         {
             var ms = new MemoryStream();
