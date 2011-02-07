@@ -30,8 +30,8 @@ namespace PdfAnalyzer
             return PdfLexer.ReadInt64(last, p);
         }
 
-        private Dictionary<int, long> xref = new Dictionary<int, long>();
-        public Dictionary<int, long> Xref { get { return xref; } }
+        private Dictionary<int, PdfObject> xref = new Dictionary<int, PdfObject>();
+        public Dictionary<int, PdfObject> Xref { get { return xref; } }
 
         private Dictionary<int, object> objs = new Dictionary<int, object>();
 
@@ -40,7 +40,7 @@ namespace PdfAnalyzer
             if (objs.ContainsKey(no)) return objs[no];
             if (!xref.ContainsKey(no)) return null;
 
-            stream.Position = xref[no];
+            stream.Position = xref[no].Position;
             Lexer.Clear();
             Lexer.ReadToken();
             var ret = Read();
@@ -95,7 +95,7 @@ namespace PdfAnalyzer
                         throw Lexer.Abort("xref: must be 'n'");
                     if (!xref.ContainsKey(no))
                     {
-                        xref.Add(no, offset);
+                        xref.Add(no, new PdfObject(offset, no, 0));
                     }
                 }
             }
@@ -104,7 +104,7 @@ namespace PdfAnalyzer
         private void readXrefObject()
         {
             var obj = new PdfObject(this);
-            if (!xref.ContainsKey(obj.Number)) xref[obj.Number] = obj.Position;
+            if (!xref.ContainsKey(obj.Number)) xref[obj.Number] = obj;
             if (!objs.ContainsKey(obj.Number)) objs[obj.Number] = obj;
             if (obj.Type != "/XRef" || obj.StreamLength == 0)
                 throw Lexer.Abort("required: xref");
@@ -117,17 +117,21 @@ namespace PdfAnalyzer
                 throw Lexer.Abort("required: /W [ n n n ]");
             var ww = new int[3];
             for (int i = 0; i < 3; i++) ww[i] = (int)(double)w[i];
-            int start = 0, size = 0;
+            int size = 0;
             if (obj.Dictionary.ContainsKey("/Size"))
                 size = (int)(double)obj.Dictionary["/Size"];
+            int[] index = null;
             if (obj.Dictionary.ContainsKey("/Index"))
             {
                 var idx = obj.Dictionary["/Index"] as object[];
                 if (idx == null || idx.Length != 2)
                     throw Lexer.Abort("required: /Index [ n n ]");
-                start = (int)(double)idx[0];
-                size = (int)(double)idx[1];
+                index = new int[idx.Length];
+                for (int i = 0; i < idx.Length; i++)
+                    index[i] = (int)(double)idx[i];
             }
+            else
+                index = new[] { 0, size };
 
             foreach (var key in new[] { "/Root", "/Size", "/Info", "/ID" })
             {
@@ -137,14 +141,22 @@ namespace PdfAnalyzer
 
             using (var s = obj.GetStream(stream))
             {
-                for (int i = 0, no = start; i < size; i++, no++)
+                for (int i = 0; i < index.Length; i += 2)
                 {
-                    var type = s.ReadByte();
-                    var cr0 = ReadToInt64(s, ww[0]);
-                    var cr1 = ReadToInt64(s, ww[1]);
-                    var cr2 = ReadToInt64(s, ww[2]);
-                    if (!xref.ContainsKey(no)) xref[no] = cr1;
-                    System.Diagnostics.Debug.Print("{0}: {1} {2} {3} {4}", no, type, cr0, cr1, cr2);
+                    var end = index[i] + index[i + 1];
+                    for (int j = index[i]; j < end; j++)
+                    {
+                        var type = ww[0] == 0 ? 1 : ReadToInt64(s, ww[0]);
+                        var f2 = ReadToInt64(s, ww[1]);
+                        var f3 = ReadToInt64(s, ww[2]);
+                        if (!xref.ContainsKey(j))
+                        {
+                            if (type == 1)
+                                xref.Add(j, new PdfObject(f2, j, 0));
+                            else if (type == 2)
+                                xref.Add(j, new PdfObject((int)f2, (int)f3));
+                        }
+                    }
                 }
             }
 
@@ -193,7 +205,7 @@ namespace PdfAnalyzer
                 Lexer.ReadToken();
                 readXrefObject();
             }
-            if (prev != null)
+            else if (prev != null)
             {
                 stream.Position = (long)prev;
                 Lexer.Clear();

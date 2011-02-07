@@ -13,13 +13,32 @@ namespace PdfAnalyzer
         public long Length { get; private set; }
         public string Type { get; private set; }
         public int Number { get; private set; }
-        public int Number2 { get; private set; }
+        public int Index { get; private set; }
         public PdfDictionary Dictionary { get; private set; }
         public long StreamStart { get; private set; }
         public long StreamLength { get; private set; }
         public object Object { get; private set; }
+        public int ObjStm { get; private set; }
+
+        public PdfObject(long position, int no, int index)
+        {
+            Position = position;
+            Number = no;
+            Index = index;
+        }
+
+        public PdfObject(int objstm, int index)
+        {
+            ObjStm = objstm;
+            Index = index;
+        }
 
         public PdfObject(PdfParser parser)
+        {
+            Read(parser);
+        }
+
+        public void Read(PdfParser parser)
         {
             var lexer = parser.Lexer;
             Position = lexer.Position;
@@ -27,7 +46,7 @@ namespace PdfAnalyzer
                 throw lexer.Abort("required: number");
             Number = int.Parse(lexer.Current);
             lexer.ReadToken();
-            Number2 = int.Parse(lexer.Current);
+            Index = int.Parse(lexer.Current);
             lexer.ReadToken();
             if (lexer.Current != "obj")
                 throw lexer.Abort("required: obj");
@@ -71,10 +90,7 @@ namespace PdfAnalyzer
             {
                 var filter = Dictionary["/Filter"] as string;
                 if (filter == "/FlateDecode")
-                {
-                    s.Position += 2;
-                    return new DeflateStream(s, CompressionMode.Decompress);
-                }
+                    return new PdfDeflateStream(s, this);
             }
             return s;
         }

@@ -52,6 +52,7 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="PdfDeflateStream.cs" />
     <Compile Include="PdfLexer.cs" />
     <Compile Include="PdfObject.cs" />
     <Compile Include="PdfParser.cs" />

@@ -49,11 +49,21 @@ namespace PdfAnalyzer
             var tr = parser.GetTrailerReferences();
             foreach (var k in keys)
             {
-                var offset = parser.Xref[k];
+                var obj = parser.Xref[k];
+                var pos = obj.Position;
                 var details = tr.ContainsKey(k) ? tr[k] : "";
-                var it = new ListViewItem(
-                    new[] { "", k.ToString(), offset.ToString(), offset.ToString("x"), details });
-                listView1.Items.Add(it);
+                var cells = new string[7];
+                bool sub = obj.ObjStm != 0;
+                listView1.Items.Add(new ListViewItem(new[]
+                {
+                    "",
+                    k.ToString(),
+                    sub ? "" : pos.ToString(),
+                    sub ? "" : pos.ToString("x"),
+                    !sub ? "" : obj.ObjStm.ToString(),
+                    !sub ? "" : obj.Index.ToString(),
+                    details
+                }));
             }
             listView1.EndUpdate();
         }
