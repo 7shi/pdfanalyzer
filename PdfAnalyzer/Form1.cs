@@ -32,21 +32,21 @@ namespace PdfAnalyzer
             Close();
         }
 
+        private PdfDocument doc;
+
         private void ReadPDF(string pdf)
         {
             toolStripStatusLabel1.Text = pdf;
             listView1.Items.Clear();
-            var doc = new PdfDocument(pdf);
+            doc = new PdfDocument(pdf);
 
             listView1.BeginUpdate();
             var keys = new List<int>(doc.Keys);
             keys.Sort();
-            var tr = doc.GetTrailerReferences();
             foreach (var k in keys)
             {
-                var obj = doc[k];
+                var obj = doc.GetObject(k);
                 var pos = obj.Position;
-                var details = tr.ContainsKey(k) ? tr[k] : "";
                 var cells = new string[7];
                 bool sub = obj.ObjStm != 0;
                 listView1.Items.Add(new ListViewItem(new[]
@@ -57,10 +57,25 @@ namespace PdfAnalyzer
                     sub ? "" : pos.ToString("x"),
                     !sub ? "" : obj.ObjStm.ToString(),
                     !sub ? "" : obj.Index.ToString(),
-                    details
-                }));
+                    obj.Details
+                }) { Tag = k });
             }
             listView1.EndUpdate();
+        }
+
+        private void listView1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var li = listView1.FocusedItem;
+            if (li == null || !(li.Tag is int))
+                textBox1.Clear();
+            else
+                textBox1.Text = doc.ReadObject((int)li.Tag);
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            if (doc != null) doc.Dispose();
         }
     }
 }

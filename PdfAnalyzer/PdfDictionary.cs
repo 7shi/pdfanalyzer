@@ -28,7 +28,7 @@ namespace PdfAnalyzer
 
         public object this[string key]
         {
-            get { return dic[key]; }
+            get { return dic.ContainsKey(key) ? dic[key] : null; }
         }
 
         public Dictionary<string, object>.KeyCollection Keys

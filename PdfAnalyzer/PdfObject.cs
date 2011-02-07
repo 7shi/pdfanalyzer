@@ -19,6 +19,7 @@ namespace PdfAnalyzer
         public long StreamLength { get; private set; }
         public object Object { get; private set; }
         public int ObjStm { get; private set; }
+        public string Details = "";
 
         public PdfObject(int no, int objstm, int index, long position = 0)
         {
@@ -26,6 +27,7 @@ namespace PdfAnalyzer
             Number = no;
             ObjStm = objstm;
             Index = index;
+            if (Number == 0) HasRead = true;
         }
 
         public PdfObject(PdfDocument doc, PdfParser parser)
@@ -37,13 +39,22 @@ namespace PdfAnalyzer
 
         public void Read(PdfDocument doc, PdfParser parser)
         {
+            if (HasRead) return;
+            HasRead = true;
             if (ObjStm != 0)
             {
-                doc[ObjStm].Read(doc, parser);
+                doc.GetObject(ObjStm).Read(doc, parser);
                 return;
             }
             var lexer = parser.Lexer;
-            Position = lexer.Position;
+            if (Position == 0)
+                Position = lexer.Position;
+            else
+            {
+                lexer.Stream.Position = Position;
+                lexer.Clear();
+                lexer.ReadToken();
+            }
             if (!lexer.IsNumber)
                 throw lexer.Abort("required: number");
             Number = int.Parse(lexer.Current);
@@ -59,13 +70,7 @@ namespace PdfAnalyzer
             {
                 if (Dictionary == null | !Dictionary.ContainsKey("/Length"))
                     throw lexer.Abort("not found: /Length");
-                var len = Dictionary["/Length"];
-                if (len is double)
-                    StreamLength = (long)(double)len;
-                else if (len is PdfReference)
-                    throw new NotImplementedException();
-                else
-                    throw lexer.Abort("unexpected /Length: {0}", len);
+                StreamLength = (long)lexer.GetValue(doc, Dictionary["/Length"]);
                 StreamStart = lexer.SkipStream(StreamLength);
                 lexer.ReadToken();
                 if (lexer.Current != "endstream")
@@ -79,8 +84,7 @@ namespace PdfAnalyzer
             Length = lexer.Position + 6 - Position;
             lexer.ReadToken();
             if (Type == "/ObjStm")
-                readObjStm(doc, parser.Lexer.Stream);
-            HasRead = true;
+                readObjStm(doc, parser.Lexer);
         }
 
         private void readDictionary(PdfParser parser)
@@ -103,32 +107,42 @@ namespace PdfAnalyzer
             return s;
         }
 
-        private void readObjStm(PdfDocument doc, Stream stream)
+        private void readObjStm(PdfDocument doc, PdfLexer lexer)
         {
-            using (var s = GetStream(stream))
+            using (var s = GetStream(lexer.Stream))
             {
-                if (!Dictionary.ContainsKey("N"))
+                if (!Dictionary.ContainsKey("/N"))
                     throw new Exception(string.Format(
-                        "{0:x} [ObjStm] required: N", Position));
-                var n = (int)(double)Dictionary["N"];
+                        "{0:x} [ObjStm] required: /N", Position));
+                var n = (int)(double)Dictionary["/N"];
+                if (!Dictionary.ContainsKey("/First"))
+                    throw new Exception(string.Format(
+                        "{0:x} [ObjStm] required: /First", Position));
+                var first = (int)(double)Dictionary["/First"];
                 var objno = new int[n];
+                var objpos = new long[n];
                 var parser = new PdfParser(s);
-                var lexer = parser.Lexer;
+                var lexer2 = parser.Lexer;
                 for (int i = 0; i < n; i++)
                 {
-                    lexer.ReadToken();
-                    objno[i] = int.Parse(lexer.Current);
-                    lexer.ReadToken();
+                    lexer2.ReadToken();
+                    objno[i] = int.Parse(lexer2.Current);
+                    lexer2.ReadToken();
+                    objpos[i] = int.Parse(lexer2.Current);
                 }
+                lexer2.ReadToken();
                 for (int i = 0; i < n; i++)
-                    doc[objno[i]].readFromStream(parser);
+                {
+                    var obj = doc[objno[i]];
+                    obj.HasRead = true;
+                    obj.readDictionary(parser);
+                    obj.Position = first + objpos[i];
+                    if (i < n - 1)
+                        obj.Length = objpos[i + 1] - objpos[i];
+                    else
+                        obj.Length = s.Position - obj.Position;
+                }
             }
-        }
-
-        private void readFromStream(PdfParser parser)
-        {
-            readDictionary(parser);
-            HasRead = true;
         }
     }
 }

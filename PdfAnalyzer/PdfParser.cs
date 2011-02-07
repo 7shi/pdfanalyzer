@@ -15,8 +15,6 @@ namespace PdfAnalyzer
         {
             this.stream = stream;
             Lexer = new PdfLexer(stream);
-            if (Lexer.ReadAscii(4) != "%PDF")
-                throw new Exception("signature is not %PDF");
         }
 
         private long readStartXref()
@@ -62,7 +60,7 @@ namespace PdfAnalyzer
                 {
                     int no = start + i;
                     Lexer.ReadToken();
-                    int offset = int.Parse(Lexer.Current);
+                    long offset = long.Parse(Lexer.Current);
                     Lexer.ReadToken();
                     int t = int.Parse(Lexer.Current);
                     if (no == 0 && t != 65535)
@@ -76,9 +74,7 @@ namespace PdfAnalyzer
                     else if (Lexer.Current != "n")
                         throw Lexer.Abort("xref: must be 'n'");
                     if (!doc.ContainsKey(no))
-                    {
-                        doc.Add(new PdfObject(offset, no, 0));
-                    }
+                        doc.Add(new PdfObject(no, 0, 0, offset));
                 }
             }
         }
@@ -233,7 +229,7 @@ namespace PdfAnalyzer
                 Lexer.ReadToken();
                 while (Lexer.Current != null)
                 {
-                    if (Lexer.Current == "]")
+                    if (cache == null && Lexer.Current == "]")
                     {
                         Lexer.ReadToken();
                         break;

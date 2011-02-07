@@ -55,16 +55,14 @@ namespace PdfAnalyzer
             for (; cur != -1; cur = Stream.ReadByte())
             {
                 var ch = (char)cur;
-                if (char.IsDigit(ch))
+                if (ch == '-' || char.IsDigit(ch))
                 {
-                    for (; cur != -1; cur = Stream.ReadByte())
+                    do
                     {
-                        var ch2 = (char)cur;
-                        if (ch2 == '.' || char.IsDigit(ch2))
-                            sb.Append(ch2);
-                        else
-                            break;
+                        sb.Append((char)cur);
+                        cur = Stream.ReadByte();
                     }
+                    while (cur != -1 && (cur == '.' || char.IsDigit((char)cur)));
                     IsNumber = true;
                     break;
                 }
@@ -75,7 +73,7 @@ namespace PdfAnalyzer
                         sb.Append((char)cur);
                         cur = Stream.ReadByte();
                     }
-                    while (cur != -1 && (cur == '_' || char.IsLetterOrDigit((char)cur)));
+                    while (cur != -1 && (cur == '-' || cur == '_' || char.IsLetterOrDigit((char)cur)));
                     break;
                 }
                 else if (ch > ' ')
@@ -96,11 +94,49 @@ namespace PdfAnalyzer
         public string ReadAscii(int len)
         {
             var buf = new byte[len];
-            var readlen = Stream.Read(buf, 0, len);
-            var cbuf = new char[readlen];
-            for (int i = 0; i < readlen; i++)
-                cbuf[i] = (char)buf[i];
-            return new string(cbuf);
+            var rlen = Stream.Read(buf, 0, len);
+            return GetAscii(buf, 0, rlen);
+        }
+
+        public static string GetAscii(byte[] buf, int start, int count)
+        {
+            var sb = new StringBuilder();
+            char prev = '\0';
+            for (int i = 0; i < count; i++)
+            {
+                var ch = (char)buf[start + i];
+                if (prev == '\r' && ch != '\n')
+                    sb.Append('\n');
+                else if (prev != '\r' && ch == '\n')
+                    sb.Append('\r');
+                sb.Append(ch);
+                prev = ch;
+            }
+            return sb.ToString();
+        }
+
+        public string ReadString(int len, Encoding enc)
+        {
+            var buf = new byte[len];
+            var rlen = Stream.Read(buf, 0, len);
+            return GetString(buf, 0, rlen, enc);
+        }
+
+        public static string GetString(byte[] buf, int start, int count, Encoding enc)
+        {
+            var list = new List<byte>();
+            byte prev = 0;
+            for (int i = 0; i < count; i++)
+            {
+                var ch = buf[start + i];
+                if (prev == '\r' && ch != '\n')
+                    list.Add((byte)'\n');
+                else if (prev != '\r' && ch == '\n')
+                    list.Add((byte)'\r');
+                list.Add(ch);
+                prev = ch;
+            }
+            return enc.GetString(list.ToArray());
         }
 
         public static long ReadInt64(string s, int pos)
@@ -127,6 +163,23 @@ namespace PdfAnalyzer
             var ret = Stream.Position;
             Stream.Position += len;
             return ret;
+        }
+
+        public double GetValue(PdfDocument doc, object val)
+        {
+            if (val is double)
+                return (long)(double)val;
+            else if (val is PdfReference)
+            {
+                var pos = Stream.Position;
+                var lenref = val as PdfReference;
+                var lenobj = doc[lenref.Number];
+                var ret = (double)lenobj.Object;
+                Stream.Position = pos;
+                return ret;
+            }
+            else
+                throw Abort("unexpected /Length: {0}", val);
         }
     }
 }

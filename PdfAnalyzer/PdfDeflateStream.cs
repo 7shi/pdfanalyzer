@@ -67,15 +67,11 @@ namespace PdfAnalyzer
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            int ret = 0;
             if (columns == 0)
-            {
-                int ret = ds.Read(buffer, offset, count);
-                position += ret;
-                return ret;
-            }
+                ret = ds.Read(buffer, offset, count);
             else
             {
-                int ret = 0;
                 while (ret < count)
                 {
                     if (rowpos >= rows.Length)
@@ -94,8 +90,9 @@ namespace PdfAnalyzer
                     ret += rlen;
                     rowpos += rlen;
                 }
-                return ret;
             }
+            position += ret;
+            return ret;
         }
 
         public override long Seek(long offset, SeekOrigin origin)
