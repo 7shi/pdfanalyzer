@@ -148,7 +148,7 @@ namespace PdfAnalyzer
                         var s1 = parser.Lexer.ReadAscii(len1);
                         stream.Position += obj.StreamLength;
                         var s2 = parser.Lexer.ReadAscii(len2);
-                        if (!s2.StartsWith("\r\n")) s2 = s2.Substring(2);
+                        if (s2.StartsWith("\r\n")) s2 = s2.Substring(2);
                         sw.Write(s1);
                         if (!s1.EndsWith("\r\n")) sw.WriteLine();
                         var filter = obj.Dictionary["/Filter"] as string;
