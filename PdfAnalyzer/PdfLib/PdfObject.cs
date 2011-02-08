@@ -8,17 +8,14 @@ namespace PdfLib
 {
     public class PdfObject
     {
-        public double Value;
-        public string Text;
-        public PdfObject[] Objects;
-
-        private Dictionary<string, PdfObject> dict;
+        private Dictionary<string, object> dict;
         private PdfDocument doc;
 
         public long Position;
         public int Number;
         public int Index;
         public int ObjStm;
+        public object Object;
         public string Details = "";
 
         public string Type { get; private set; }
@@ -68,9 +65,7 @@ namespace PdfLib
             {
                 if (dict == null | !dict.ContainsKey("/Length"))
                     throw lexer.Abort("not found: /Length");
-                var pos = lexer.Stream.Position;
-                StreamLength = (long)this["/Length"].Value;
-                lexer.Stream.Position = pos;
+                StreamLength = (long)GetValue("/Length");
                 StreamStart = lexer.SkipStream(StreamLength);
                 lexer.ReadToken();
                 if (lexer.Current != "endstream")
@@ -78,7 +73,7 @@ namespace PdfLib
                 lexer.ReadToken();
             }
             if (lexer.Current != "endobj")
-                parser.Read(this);
+                Object = parser.Read();
             if (lexer.Current != "endobj")
                 throw lexer.Abort("required: endobj");
             Length = lexer.Position + 6 - Position;
@@ -89,10 +84,10 @@ namespace PdfLib
 
         public Stream GetStream(Stream stream)
         {
-            var filter = this["/Filter"];
+            var filter = GetText("/Filter");
             stream.Position = StreamStart;
             var s = new SubStream(stream, StreamLength);
-            if (filter != null && filter.Text == "/FlateDecode")
+            if (filter != null && filter == "/FlateDecode")
                 return new PdfDeflateStream(s, this);
             return s;
         }
@@ -104,11 +99,11 @@ namespace PdfLib
                 if (!dict.ContainsKey("/N"))
                     throw new Exception(string.Format(
                         "{0:x} [ObjStm] required: /N", Position));
-                var n = (int)this["/N"].Value;
+                var n = (int)GetValue("/N");
                 if (!dict.ContainsKey("/First"))
                     throw new Exception(string.Format(
                         "{0:x} [ObjStm] required: /First", Position));
-                var first = (int)this["/First"].Value;
+                var first = (int)GetValue("/First");
                 var objno = new int[n];
                 var objpos = new long[n];
                 var parser = new PdfParser(doc, s);
@@ -150,7 +145,7 @@ namespace PdfLib
 
         public void ReadDictionary(PdfParser parser)
         {
-            dict = new Dictionary<string, PdfObject>();
+            dict = new Dictionary<string, object>();
             var lexer = parser.Lexer;
             lexer.ReadToken();
             while (lexer.Current != null)
@@ -158,24 +153,69 @@ namespace PdfLib
                 var key = lexer.Current;
                 lexer.ReadToken();
                 if (key == ">>") break;
-                dict.Add(key, parser.Read(null));
+                dict.Add(key, parser.Read());
             }
-            var type = this["/Type"];
-            if (type != null) Type = type.Text;
+            var type = GetText("/Type");
+            if (type != null) Type = type;
         }
 
-        public PdfObject this[string key]
+        public double GetValue(string key)
+        {
+            var obj = this[key];
+            if (obj is PdfObject)
+                obj = (obj as PdfObject).Object;
+            else if (obj is object[])
+                obj = (obj as object[])[0];
+            return (double)obj;
+        }
+
+        public string GetText(string key)
+        {
+            var obj = this[key];
+            if (obj is PdfObject)
+                obj = (obj as PdfObject).Object;
+            else if (obj is object[])
+                obj = (obj as object[])[0];
+            return obj as string;
+        }
+
+        public object[] GetObjects(string key)
+        {
+            var obj = this[key];
+            if (obj is PdfObject)
+                obj = (obj as PdfObject).Object;
+            return obj as object[];
+        }
+
+        public PdfObject GetObject(string key)
+        {
+            return this[key] as PdfObject;
+        }
+
+        public object this[string key]
         {
             get
             {
-                if (!ContainsKey(key)) return null;
+                if (dict == null || !dict.ContainsKey(key))
+                    return null;
                 var ret = dict[key];
-                if (ret.Position > 0) ret = doc[ret.Number];
+                if (ret is PdfObject && doc.Parser != null)
+                {
+                    var obj = ret as PdfObject;
+                    if (!obj.HasRead)
+                    {
+                        var parser = doc.Parser;
+                        var state = parser.Lexer.Save();
+                        obj.Read(parser);
+                        parser.Lexer.Load(state);
+                    }
+                    (ret as PdfObject).Read(doc.Parser);
+                }
                 return ret;
             }
         }
 
-        public Dictionary<string, PdfObject>.KeyCollection Keys
+        public Dictionary<string, object>.KeyCollection Keys
         {
             get { return dict.Keys; }
         }
@@ -184,5 +224,12 @@ namespace PdfLib
         {
             return dict != null ? dict.ContainsKey(key) : false;
         }
+
+        public bool HasValue { get { return Object is double; } }
+        public bool HasText { get { return Object is string; } }
+        public bool HasObjects { get { return Object is object[]; } }
+        public double Value { get { return (double)Object; } }
+        public string Text { get { return Object as string; } }
+        public object[] Objects { get { return Object as object[]; } }
     }
 }

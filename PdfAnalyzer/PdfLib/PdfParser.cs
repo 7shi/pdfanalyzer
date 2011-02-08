@@ -87,23 +87,23 @@ namespace PdfLib
             if (obj.Type != "/XRef" || obj.StreamLength == 0)
                 throw Lexer.Abort("required: xref");
             obj.Details = obj.Type;
-            var w = obj["/W"];
-            if (w == null || w.Objects.Length != 3)
+            var w = obj.GetObjects("/W");
+            if (w == null || w.Length != 3)
                 throw Lexer.Abort("required: /W [ n n n ]");
             var ww = new int[3];
-            for (int i = 0; i < 3; i++) ww[i] = (int)w.Objects[i].Value;
+            for (int i = 0; i < 3; i++) ww[i] = (int)(double)w[i];
             int size = 0;
             if (obj.ContainsKey("/Size"))
-                size = (int)obj["/Size"].Value;
+                size = (int)obj.GetValue("/Size");
             int[] index = null;
             if (obj.ContainsKey("/Index"))
             {
-                var idx = obj["/Index"].Objects;
-                if (idx == null || idx.Length != 2)
-                    throw Lexer.Abort("required: /Index [ n n ]");
+                var idx = obj.GetObjects("/Index");
+                if (idx == null || idx.Length == 0 || (idx.Length & 1) != 0)
+                    throw Lexer.Abort("required: /Index [ n n ... ]");
                 index = new int[idx.Length];
                 for (int i = 0; i < idx.Length; i++)
-                    index[i] = (int)idx[i].Value;
+                    index[i] = (int)(double)idx[i];
             }
             else
                 index = new[] { 0, size };
@@ -145,7 +145,7 @@ namespace PdfLib
             Lexer.Clear();
             if (obj.ContainsKey("/Prev"))
             {
-                stream.Position = (long)obj["/Prev"].Value;
+                stream.Position = (long)obj.GetValue("/Prev");
                 readXref();
             }
         }
@@ -173,9 +173,9 @@ namespace PdfLib
             foreach (var key in dict.Keys)
             {
                 if (key == "/Prev")
-                    prev = (long)dict[key].Value;
+                    prev = (long)dict.GetValue(key);
                 else if (key == "/XRefStm")
-                    xrefstm = (long)dict[key].Value;
+                    xrefstm = (long)dict.GetValue(key);
                 else if (!doc.ContainsTrailer(key))
                     doc.AddTrailer(key, dict[key]);
             }
@@ -196,13 +196,13 @@ namespace PdfLib
 
         private double? cache;
 
-        public PdfObject Read(PdfObject obj)
+        public object Read()
         {
             if (cache != null)
             {
-                if (obj == null) obj = new PdfObject();
-                obj.Value = cache.Value;
+                var ret = cache.Value;
                 cache = null;
+                return ret;
             }
             else if (Lexer.IsNumber)
             {
@@ -215,29 +215,22 @@ namespace PdfLib
                     if (Lexer.Current == "R")
                     {
                         Lexer.ReadToken();
-                        obj = doc.GetObject((int)num);
+                        return doc.GetObject((int)num);
                     }
                     else
-                    {
                         cache = num2;
-                        if (obj == null) obj = new PdfObject();
-                        obj.Value = num;
-                    }
                 }
-                else
-                {
-                    if (obj == null) obj = new PdfObject();
-                    obj.Value = num;
-                }
+                return num;
             }
             else if (Lexer.Current == "<<")
             {
-                if (obj == null) obj = new PdfObject();
-                obj.ReadDictionary(this);
+                var ret = new PdfObject();
+                ret.ReadDictionary(this);
+                return ret;
             }
             else if (Lexer.Current == "[")
             {
-                var list = new List<PdfObject>();
+                var list = new List<object>();
                 Lexer.ReadToken();
                 while (Lexer.Current != null)
                 {
@@ -246,50 +239,16 @@ namespace PdfLib
                         Lexer.ReadToken();
                         break;
                     }
-                    list.Add(Read(null));
+                    list.Add(Read());
                 }
-                if (obj == null) obj = new PdfObject();
-                obj.Objects = list.ToArray();
-            }
-            else if (Lexer.Current == "<")
-            {
-                if (obj == null) obj = new PdfObject();
-                obj.Text = ReadTo('>');
-            }
-            else if (Lexer.Current == "(")
-            {
-                if (obj == null) obj = new PdfObject();
-                obj.Text = ReadTo(')', '\\');
+                return list.ToArray();
             }
             else
             {
                 var ret = Lexer.Current;
                 Lexer.ReadToken();
-                if (obj == null) obj = new PdfObject();
-                obj.Text = ret;
+                return ret;
             }
-            return obj;
-        }
-
-        private string ReadTo(char end, int escape = -1)
-        {
-            var sb = new StringBuilder(Lexer.Current);
-            int prev = -1;
-            for (; ; )
-            {
-                int b = stream.ReadByte();
-                if (b == -1) break;
-                var ch = (char)b;
-                sb.Append(ch);
-                if (ch == end && (escape < 0 || prev != escape))
-                {
-                    Lexer.Clear();
-                    Lexer.ReadToken();
-                    break;
-                }
-                prev = ch;
-            }
-            return sb.ToString();
         }
     }
 }

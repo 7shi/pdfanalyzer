@@ -14,12 +14,12 @@ namespace PdfLib
 
         public PdfDeflateStream(Stream s, PdfObject obj)
         {
-            var dp = obj["/DecodeParms"] as PdfObject;
+            var dp = obj.GetObject("/DecodeParms");
             if (dp != null)
             {
                 if (dp.ContainsKey("/Columns"))
                 {
-                    columns = (int)dp["/Columns"].Value;
+                    columns = (int)dp.GetValue("/Columns");
                     prev = new byte[columns];
                     rows = new byte[columns];
                     rowpos = rows.Length;
