@@ -65,14 +65,7 @@ namespace PdfLib
                     if (no == 0 && t != 65535)
                         throw Lexer.Abort("xref: 0 must be 65535");
                     Lexer.ReadToken();
-                    if (no == 0)
-                    {
-                        if (Lexer.Current != "f")
-                            throw Lexer.Abort("xref: 0 must be 'f'");
-                    }
-                    else if (Lexer.Current != "n")
-                        throw Lexer.Abort("xref: must be 'n'");
-                    if (!doc.ContainsKey(no))
+                    if (Lexer.Current == "n" && !doc.ContainsKey(no))
                         doc.Add(new PdfObject(no, 0, 0, offset));
                 }
             }
@@ -80,7 +73,15 @@ namespace PdfLib
 
         private void readXrefObject(PdfDocument doc)
         {
-            var obj = new PdfObject(doc, this);
+            PdfObject obj;
+            try
+            {
+                obj = new PdfObject(doc, this);
+            }
+            catch
+            {
+                return;
+            }
             if (doc.ContainsKey(obj.Number)) return;
             doc.Add(obj);
             if (obj.Type != "/XRef" || obj.StreamLength == 0)
