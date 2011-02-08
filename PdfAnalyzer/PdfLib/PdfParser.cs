@@ -80,7 +80,7 @@ namespace PdfLib
 
         private void readXrefObject()
         {
-            var obj = new PdfObject(doc);
+            var obj = new PdfObject(doc, int.Parse(Lexer.Current));
             obj.Read(this);
             if (doc.ContainsKey(obj.Number)) return;
             doc.Add(obj);
@@ -167,8 +167,8 @@ namespace PdfLib
             Lexer.ReadToken();
             if (Lexer.Current != "<<")
                 throw Lexer.Abort("required: <<");
-            var dict = new PdfObject(doc);
-            dict.ReadDictionary(this);
+            Lexer.ReadToken();
+            var dict = new PdfObject(doc, this);
             long? prev = null, xrefstm = null;
             foreach (var key in dict.Keys)
             {
@@ -224,9 +224,8 @@ namespace PdfLib
             }
             else if (Lexer.Current == "<<")
             {
-                var ret = new PdfObject();
-                ret.ReadDictionary(this);
-                return ret;
+                Lexer.ReadToken();
+                return new PdfObject(doc, this);
             }
             else if (Lexer.Current == "[")
             {

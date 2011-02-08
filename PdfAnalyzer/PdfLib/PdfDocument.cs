@@ -77,7 +77,11 @@ namespace PdfLib
             {
                 var ret = GetObject(no);
                 if (ret != null && !ret.HasRead && Parser != null)
+                {
+                    var state = Parser.Lexer.Save();
                     ret.Read(Parser);
+                    Parser.Lexer.Load(state);
+                }
                 return ret;
             }
         }
@@ -88,10 +92,7 @@ namespace PdfLib
             if (objs.ContainsKey(no))
                 ret = objs[no];
             else if (Parser == null)
-            {
-                ret = new PdfObject(this) { Number = no };
-                objs.Add(no, ret);
-            }
+                objs.Add(no, ret = new PdfObject(this, no));
             return ret;
         }
 
@@ -196,11 +197,6 @@ namespace PdfLib
                 }
             }
             return sw.ToString();
-        }
-
-        public byte[] GetStreamBytes(PdfObject obj)
-        {
-            return obj.GetStreamBytes(Parser.Lexer.Stream);
         }
     }
 }

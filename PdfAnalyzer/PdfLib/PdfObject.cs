@@ -12,22 +12,28 @@ namespace PdfLib
         private PdfDocument doc;
 
         public long Position;
-        public int Number;
         public int Index;
         public int ObjStm;
         public object Object;
         public string Details = "";
 
+        public int Number { get; private set; }
         public string Type { get; private set; }
         public long Length { get; private set; }
         public long StreamStart { get; private set; }
         public long StreamLength { get; private set; }
 
-        public PdfObject() { }
-
-        public PdfObject(PdfDocument doc)
+        public PdfObject(PdfDocument doc, int no)
         {
             this.doc = doc;
+            this.Number = no;
+        }
+
+        public PdfObject(PdfDocument doc, PdfParser parser)
+        {
+            this.doc = doc;
+            HasRead = true;
+            ReadDictionary(parser);
         }
 
         public bool HasRead { get; private set; }
@@ -52,7 +58,8 @@ namespace PdfLib
             }
             if (!lexer.IsNumber)
                 throw lexer.Abort("required: number");
-            Number = int.Parse(lexer.Current);
+            if (Number != int.Parse(lexer.Current))
+                throw lexer.Abort("invalid number: {0}", Number);
             lexer.ReadToken();
             Index = int.Parse(lexer.Current);
             lexer.ReadToken();
@@ -60,7 +67,10 @@ namespace PdfLib
                 throw lexer.Abort("required: obj");
             lexer.ReadToken();
             if (lexer.Current == "<<")
+            {
+                lexer.ReadToken();
                 ReadDictionary(parser);
+            }
             if (lexer.Current == "stream")
             {
                 if (dict == null | !dict.ContainsKey("/Length"))
@@ -80,16 +90,6 @@ namespace PdfLib
             lexer.ReadToken();
             if (Type == "/ObjStm")
                 readObjStm(parser.Lexer);
-        }
-
-        public Stream GetStream(Stream stream)
-        {
-            var filter = GetText("/Filter");
-            stream.Position = StreamStart;
-            var s = new SubStream(stream, StreamLength);
-            if (filter != null && filter == "/FlateDecode")
-                return new PdfDeflateStream(s, this);
-            return s;
         }
 
         private void readObjStm(PdfLexer lexer)
@@ -118,7 +118,10 @@ namespace PdfLib
                 lexer2.ReadToken();
                 for (int i = 0; i < n; i++)
                 {
-                    var obj = doc[objno[i]];
+                    if (lexer2.Current != "<<")
+                        throw lexer2.Abort("required: <<");
+                    lexer2.ReadToken();
+                    var obj = doc.GetObject(objno[i]);
                     obj.HasRead = true;
                     obj.ReadDictionary(parser);
                     obj.Position = first + objpos[i];
@@ -128,6 +131,16 @@ namespace PdfLib
                         obj.Length = s.Position - obj.Position;
                 }
             }
+        }
+
+        public Stream GetStream(Stream stream)
+        {
+            var filter = GetText("/Filter");
+            stream.Position = StreamStart;
+            var s = new SubStream(stream, StreamLength);
+            if (filter != null && filter == "/FlateDecode")
+                return new PdfDeflateStream(s, this);
+            return s;
         }
 
         public byte[] GetStreamBytes(Stream stream)
@@ -143,11 +156,17 @@ namespace PdfLib
             return ms.ToArray();
         }
 
-        public void ReadDictionary(PdfParser parser)
+        public byte[] GetStreamBytes()
         {
-            dict = new Dictionary<string, object>();
+            return GetStreamBytes(doc.Parser.Lexer.Stream);
+        }
+
+        private void ReadDictionary(PdfParser parser)
+        {
             var lexer = parser.Lexer;
-            lexer.ReadToken();
+            if (dict != null)
+                throw lexer.Abort("duplicate read");
+            dict = new Dictionary<string, object>();
             while (lexer.Current != null)
             {
                 var key = lexer.Current;
@@ -209,7 +228,6 @@ namespace PdfLib
                         obj.Read(parser);
                         parser.Lexer.Load(state);
                     }
-                    (ret as PdfObject).Read(doc.Parser);
                 }
                 return ret;
             }
@@ -228,6 +246,7 @@ namespace PdfLib
         public bool HasValue { get { return Object is double; } }
         public bool HasText { get { return Object is string; } }
         public bool HasObjects { get { return Object is object[]; } }
+
         public double Value { get { return (double)Object; } }
         public string Text { get { return Object as string; } }
         public object[] Objects { get { return Object as object[]; } }

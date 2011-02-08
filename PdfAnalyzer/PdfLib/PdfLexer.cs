@@ -53,21 +53,15 @@ namespace PdfLib
 
         public long Position { get { return position; } }
         public bool IsNumber { get { return isNumber; } }
-
         public int ObjNo { get { return objno; } }
         public string Current { get { return current; } }
 
-        public void ReadToken(bool isStream = false)
+        public void ReadToken()
         {
-            if (!isStream)
-            {
-                token2 = token1;
-                token1 = current;
-                current = ReadTokenInternal();
-                if (current == "obj") objno = int.Parse(token2);
-            }
-            else
-                current = ReadTokenInternal();
+            token2 = token1;
+            token1 = current;
+            current = ReadTokenInternal();
+            if (current == "obj") objno = int.Parse(token2);
         }
 
         private string ReadTokenInternal()
