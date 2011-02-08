@@ -18,6 +18,11 @@ namespace PdfAnalyzer
             InitializeComponent();
         }
 
+        private void fileToolStripMenuItem_DropDownOpened(object sender, EventArgs e)
+        {
+            testToolStripMenuItem.Enabled = doc != null;
+        }
+
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (openFileDialog1.ShowDialog(this) != DialogResult.OK) return;
@@ -25,6 +30,19 @@ namespace PdfAnalyzer
             var cur = Cursor.Current;
             Cursor.Current = Cursors.WaitCursor;
             ReadPDF(openFileDialog1.FileName);
+            Cursor.Current = cur;
+        }
+
+        private void testToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var cur = Cursor.Current;
+            Cursor.Current = Cursors.WaitCursor;
+
+            foreach (ListViewItem li in listView1.Items)
+            {
+                var _ = doc[(int)li.Tag];
+            }
+
             Cursor.Current = cur;
         }
 
@@ -39,6 +57,8 @@ namespace PdfAnalyzer
         {
             toolStripStatusLabel1.Text = pdf;
             listView1.Items.Clear();
+            textBox1.Clear();
+            if (doc != null) doc.Dispose();
             doc = new PdfDocument(pdf);
 
             listView1.BeginUpdate();

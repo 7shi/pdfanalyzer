@@ -56,6 +56,7 @@ namespace PdfLib
                 var ch = (char)cur;
                 if (ch == '-' || char.IsDigit(ch))
                 {
+                    Position = Stream.Position - 1;
                     do
                     {
                         sb.Append((char)cur);
@@ -67,6 +68,7 @@ namespace PdfLib
                 }
                 else if (ch == '/' || char.IsLetter(ch))
                 {
+                    Position = Stream.Position - 1;
                     do
                     {
                         sb.Append((char)cur);
@@ -77,6 +79,7 @@ namespace PdfLib
                 }
                 else if (ch > ' ')
                 {
+                    Position = Stream.Position - 1;
                     sb.Append(ch);
                     cur = Stream.ReadByte();
                     if ((ch == '<' || ch == '>') && ch == cur)
@@ -162,23 +165,6 @@ namespace PdfLib
             var ret = Stream.Position;
             Stream.Position += len;
             return ret;
-        }
-
-        public double GetValue(PdfDocument doc, object val)
-        {
-            if (val is double)
-                return (long)(double)val;
-            else if (val is PdfReference)
-            {
-                var pos = Stream.Position;
-                var lenref = val as PdfReference;
-                var lenobj = doc[lenref.Number];
-                var ret = (double)lenobj.Object;
-                Stream.Position = pos;
-                return ret;
-            }
-            else
-                throw Abort("unexpected /Length: {0}", val);
         }
     }
 }
