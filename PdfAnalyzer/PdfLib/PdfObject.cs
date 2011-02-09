@@ -81,6 +81,7 @@ namespace PdfLib
                 if (lexer.Current != "endstream")
                     throw lexer.Abort("required: endstream");
                 lexer.ReadToken();
+                //if (Details == "") Details = "stream";
             }
             if (lexer.Current != "endobj")
                 Object = parser.Read();
