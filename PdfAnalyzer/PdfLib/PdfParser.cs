@@ -248,5 +248,35 @@ namespace PdfLib
                 return ret;
             }
         }
+
+        public void ReadLinear()
+        {
+            PdfObject root = null;
+            stream.Position = 0;
+            long len = stream.Length;
+            int p = 0;
+            for (; ; )
+            {
+                Lexer.ReadToken();
+                if (Lexer.Current == null)
+                    break;
+                else if (Lexer.Current == "obj")
+                {
+                    int pp = (int)(Lexer.ObjPos * 100 / len);
+                    if (p != pp) doc.Progress(p = pp);
+                    var obj = doc.GetObject(Lexer.ObjNo);
+                    System.Diagnostics.Debug.Print("{0} {1}", Lexer.ObjPos, Lexer.ObjNo);
+                    obj.Init(Lexer.ObjPos);
+                    obj.Read(this);
+                    if (obj.Type == "/Catalog") root = obj;
+                }
+            }
+            doc.Progress(100);
+            if (root != null)
+            {
+                root.Details = "/Root";
+                doc.AddTrailer("/Root", root);
+            }
+        }
     }
 }
