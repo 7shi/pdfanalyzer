@@ -175,7 +175,7 @@ namespace PdfLib
                 dict.Add(key, parser.Read());
             }
             var type = GetText("/Type");
-            if (type != null) Type = type;
+            if (type != null) Details = Type = type;
         }
 
         public double GetValue(string key)

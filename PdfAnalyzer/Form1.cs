@@ -18,11 +18,6 @@ namespace PdfAnalyzer
             InitializeComponent();
         }
 
-        private void fileToolStripMenuItem_DropDownOpened(object sender, EventArgs e)
-        {
-            testToolStripMenuItem.Enabled = doc != null;
-        }
-
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (openFileDialog1.ShowDialog(this) != DialogResult.OK) return;
@@ -30,19 +25,6 @@ namespace PdfAnalyzer
             var cur = Cursor.Current;
             Cursor.Current = Cursors.WaitCursor;
             ReadPDF(openFileDialog1.FileName);
-            Cursor.Current = cur;
-        }
-
-        private void testToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            var cur = Cursor.Current;
-            Cursor.Current = Cursors.WaitCursor;
-
-            foreach (ListViewItem li in listView1.Items)
-            {
-                var _ = doc[(int)li.Tag];
-            }
-
             Cursor.Current = cur;
         }
 
@@ -66,19 +48,19 @@ namespace PdfAnalyzer
             keys.Sort();
             foreach (var k in keys)
             {
-                var obj = doc.GetObject(k);
+                //var obj = doc.GetObject(k);
+                var obj = doc[k];
                 var pos = obj.Position;
                 var cells = new string[7];
                 bool sub = obj.ObjStm != 0;
                 listView1.Items.Add(new ListViewItem(new[]
                 {
-                    "",
+                    obj.Details,
                     k.ToString(),
                     sub ? "" : pos.ToString(),
                     sub ? "" : pos.ToString("x"),
                     !sub ? "" : obj.ObjStm.ToString(),
-                    !sub ? "" : obj.Index.ToString(),
-                    obj.Details
+                    !sub ? "" : obj.Index.ToString()
                 }) { Tag = k });
             }
             listView1.EndUpdate();

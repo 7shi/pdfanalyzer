@@ -65,14 +65,11 @@ namespace PdfLib
                     Lexer.ReadToken();
                     int t = int.Parse(Lexer.Current);
                     Lexer.ReadToken();
-                    if (Lexer.Current == "n")
+                    if (offset > 0 && Lexer.Current == "n")
                     {
                         var p = doc.GetObject(no);
                         if (p.Position == 0 && p.ObjStm == 0)
-                        {
                             p.Position = offset;
-                            //p.Index = t;
-                        }
                     }
                 }
             }
@@ -122,6 +119,8 @@ namespace PdfLib
                     for (int j = index[i]; j < end; j++)
                     {
                         var type = ww[0] == 0 ? 1 : ReadToInt64(s, ww[0]);
+                        if (type < 0 || type > 2)
+                            throw Lexer.Abort("invalid type: {0}", type);
                         var f2 = ReadToInt64(s, ww[1]);
                         var f3 = ReadToInt64(s, ww[2]);
                         if (type == 0) continue;
