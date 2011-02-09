@@ -37,6 +37,8 @@ namespace PdfAnalyzer
             textBox1.Clear();
             if (doc != null) doc.Dispose();
 
+            toolStripProgressBar1.Value = 0;
+            toolStripProgressBar1.Visible = true;
             menuStrip1.Enabled = listView1.Enabled = textBox1.Enabled = false;
             backgroundWorker1.RunWorkerAsync(pdf);
         }
@@ -92,7 +94,7 @@ namespace PdfAnalyzer
             }
             listView1.EndUpdate();
 
-            toolStripProgressBar1.Value = 0;
+            toolStripProgressBar1.Visible = false;
             menuStrip1.Enabled = listView1.Enabled = textBox1.Enabled = true;
         }
 
