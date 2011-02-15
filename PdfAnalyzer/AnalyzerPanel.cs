@@ -34,8 +34,11 @@ namespace PdfAnalyzer
             doc = null;
         }
 
+        private int progress;
+
         private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
         {
+            progress = 0;
             doc = new PdfDocument(
                 e.Argument as string,
                 p => backgroundWorker1.ReportProgress(p));
@@ -45,6 +48,7 @@ namespace PdfAnalyzer
 
         private void backgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
+            progress = e.ProgressPercentage;
             if (ProgressChanged != null) ProgressChanged(sender, e);
         }
 
@@ -55,8 +59,17 @@ namespace PdfAnalyzer
             listView1.BeginUpdate();
             var keys = new List<int>(doc.Keys);
             keys.Sort();
-            foreach (var k in keys)
+            var prg = progress == 0 && ProgressChanged != null;
+            int p = 0;
+            for (int i = 0; i < keys.Count; i++)
             {
+                if (prg)
+                {
+                    int pp = i * 100 / keys.Count;
+                    if (p != pp)
+                        ProgressChanged(sender, new ProgressChangedEventArgs(p = pp, null));
+                }
+                var k = keys[i];
                 //var obj = doc.GetObject(k);
                 var obj = doc[k];
                 var pos = obj.Position;
